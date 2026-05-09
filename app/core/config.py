@@ -49,12 +49,28 @@ class ArtifactsConfig(BaseModel):
     root_path: str = "/artifacts"
 
 
+class S3Config(BaseModel):
+    endpoint_url: str = "http://minio:9000"
+    external_endpoint_url: str = ""
+    access_key: str = "minioadmin"
+    secret_key: str = "minioadmin"
+    bucket: str = "job-results"
+    presign_expiry_s: int = 604800  # 7 days (matches lifecycle policy)
+
+    @model_validator(mode="after")
+    def set_external_url(self) -> "S3Config":
+        if not self.external_endpoint_url:
+            self.external_endpoint_url = self.endpoint_url
+        return self
+
+
 class Settings(BaseSettings):
     grpc: GrpcConfig = GrpcConfig()
     nats: NatsConfig = NatsConfig()
     worker: WorkerConfig = WorkerConfig()
     timing: TimingConfig = TimingConfig()
     artifacts: ArtifactsConfig = ArtifactsConfig()
+    s3: S3Config = S3Config()
 
     model_config = {"env_file": ".env", "env_nested_delimiter": "__", "extra": "ignore"}
 

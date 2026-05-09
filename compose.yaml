@@ -20,13 +20,17 @@ services:
       WORKER__MAX_SLOTS: ${WORKER_MAX_SLOTS:-2}
       TIMING__HEARTBEAT_INTERVAL_S: ${HEARTBEAT_INTERVAL_S:-5}
       TIMING__PULL_INTERVAL_S: ${PULL_INTERVAL_S:-3}
+      S3__ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://node:9000}
+      S3__EXTERNAL_ENDPOINT_URL: ${S3_EXTERNAL_ENDPOINT_URL:-http://node:9000}
+      S3__ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3__SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3__BUCKET: ${S3_BUCKET:-job-results}
     env_file:
       - path: .env
         required: false
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp:/tmp
-      - ../runtime/artifacts:/artifacts
     network_mode: service:tailscale
     depends_on:
       - tailscale

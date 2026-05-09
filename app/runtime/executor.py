@@ -8,6 +8,7 @@ from pathlib import Path
 
 from app.runtime.docker_runner import DockerRunner, ExecutionResult
 from app.runtime.resources import ResourceTracker
+from app.storage.s3_client import S3Client
 from app.utils import safe_rmtree
 
 logger = logging.getLogger(__name__)
@@ -59,12 +60,14 @@ class Executor:
         scheduler_client=None,
         worker_id: str = "",
         artifact_root: str = "/artifacts",
+        s3_client: S3Client | None = None,
     ):
         self._resources = resources
         self._runner = DockerRunner()
         self._client = scheduler_client
         self._worker_id = worker_id
         self._artifact_root = Path(artifact_root)
+        self._s3 = s3_client
 
     def _load_result_payload(self, workdir: Path, logs: str) -> dict | None:
         result_file = workdir / "result.json"
@@ -150,18 +153,15 @@ class Executor:
             if artifact_candidate is None and isinstance(output_file, str):
                 artifact_candidate = output_file
 
-        artifact = self._persist_artifact(
-            job_id,
-            self._resolve_artifact_source(workdir, artifact_candidate),
-        )
+        artifact_source = self._resolve_artifact_source(workdir, artifact_candidate)
 
-        if artifact is not None and isinstance(result_payload, dict):
+        if artifact_source is not None and isinstance(result_payload, dict):
             if isinstance(result_payload.get("output_file"), str):
-                result_payload["output_file"] = artifact.name
+                result_payload["output_file"] = artifact_source.name
             if isinstance(result_payload.get("artifact_path"), str):
-                result_payload["artifact_path"] = artifact.name
+                result_payload["artifact_path"] = artifact_source.name
 
-        return result_payload, artifact
+        return result_payload, artifact_source
 
     async def execute(self, job: JobSpec) -> None:
         allocated = self._resources.allocate(
@@ -184,8 +184,23 @@ class Executor:
             if result.logs:
                 for line in result.logs.splitlines()[:50]:
                     logger.info("  [%s] %s", job.job_id, line)
-            if artifact is not None:
+
+            # Upload results to S3 and generate presigned URLs
+            result_url = ""
+            artifact_url = ""
+            if self._s3:
+                try:
+                    if result_payload:
+                        result_key = self._s3.upload_result(job.job_id, result_payload)
+                        result_url = self._s3.presign(result_key)
+                    if artifact is not None:
+                        artifact_key = self._s3.upload_artifact(job.job_id, artifact)
+                        artifact_url = self._s3.presign(artifact_key)
+                except Exception:
+                    logger.exception("Failed to upload results to S3 for job %s", job.job_id)
+            elif artifact is not None:
                 logger.info("Persisted artifact for job %s at %s", job.job_id, artifact)
+
             safe_rmtree(result.workdir)
 
             # Report result to scheduler
@@ -200,6 +215,8 @@ class Executor:
                         result_payload=result_payload,
                         started_at=started_at.isoformat(),
                         ended_at=ended_at.isoformat(),
+                        result_url=result_url,
+                        artifact_url=artifact_url,
                     )
                 except Exception:
                     logger.exception("Failed to report result for job %s", job.job_id)

@@ -79,6 +79,8 @@ class SchedulerClient:
         result_payload: dict | None = None,
         started_at: str = "",
         ended_at: str = "",
+        result_url: str = "",
+        artifact_url: str = "",
     ) -> worker_pb2.ReportJobResultResponse:
         request = worker_pb2.ReportJobResultRequest(
             job_id=job_id,
@@ -88,6 +90,8 @@ class SchedulerClient:
             error_message=error_message,
             started_at=started_at,
             ended_at=ended_at,
+            result_url=result_url,
+            artifact_url=artifact_url,
         )
         if result_payload:
             payload_struct = Struct()

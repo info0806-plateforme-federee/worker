@@ -12,6 +12,7 @@ from app.runtime.executor import Executor
 from app.services.registration import register_worker
 from app.services.heartbeat import heartbeat_loop
 from app.services.pull_loop import PullLoop
+from app.storage.s3_client import S3Client
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +42,15 @@ async def main() -> None:
 
     await register_worker(client, settings)
 
+    s3_client = S3Client(settings.s3)
+    logger.info("S3 client configured (endpoint=%s, bucket=%s)", settings.s3.endpoint_url, settings.s3.bucket)
+
     executor = Executor(
         resources,
         scheduler_client=client,
         worker_id=settings.worker.id,
         artifact_root=settings.artifacts.root_path,
+        s3_client=s3_client,
     )
     pull_loop = PullLoop(client, executor, resources, settings)
 

@@ -75,6 +75,8 @@ message ReportJobResultRequest {
   google.protobuf.Struct result_payload = 6;
   string started_at = 7;
   string ended_at = 8;
+  string result_url = 9;
+  string artifact_url = 10;
 }
 
 message ReportJobResultResponse {
