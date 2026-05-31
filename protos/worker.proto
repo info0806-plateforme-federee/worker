@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package worker;
+
+import "google/protobuf/struct.proto";
+
+service WorkerService {
+  rpc RegisterWorker (RegisterWorkerRequest) returns (RegisterWorkerResponse);
+  rpc HeartbeatWorker (HeartbeatWorkerRequest) returns (HeartbeatWorkerResponse);
+  rpc PullJob (PullJobRequest) returns (PullJobResponse);
+  rpc ReportJobResult (ReportJobResultRequest) returns (ReportJobResultResponse);
+}
+
+message RegisterWorkerRequest {
+  string worker_id = 1;
+  repeated string tags = 2;
+  int32 total_cpu = 3;
+  int32 total_mem_mb = 4;
+  int32 total_gpu = 5;
+}
+
+message RegisterWorkerResponse {
+  string worker_id = 1;
+  string status = 2;
+  string registered_at = 3;
+}
+
+message HeartbeatWorkerRequest {
+  string worker_id = 1;
+  int32 free_cpu = 2;
+  int32 free_mem_mb = 3;
+  int32 free_gpu = 4;
+  int32 running_jobs = 5;
+  int32 available_slots = 6;
+  string status = 7;
+}
+
+message HeartbeatWorkerResponse {
+  bool acknowledged = 1;
+}
+
+message PullJobRequest {
+  string worker_id = 1;
+  int32 free_cpu = 2;
+  int32 free_mem_mb = 3;
+  int32 free_gpu = 4;
+  int32 available_slots = 5;
+  repeated string tags = 6;
+}
+
+message PullJobResponse {
+  bool found = 1;
+  optional string job_id = 2;
+  optional string name = 3;
+  optional string job_type = 4;
+  repeated string tags = 5;
+  optional string image = 6;
+  optional string code = 7;
+  optional string command = 8;
+  google.protobuf.Struct args = 9;
+  google.protobuf.Struct env = 10;
+  optional int32 min_cpu = 11;
+  optional int32 min_gpu = 12;
+  optional int32 min_mem_mb = 13;
+  optional string deadline = 14;
+  int32 retry_count = 15;
+}
+
+message ReportJobResultRequest {
+  string job_id = 1;
+  string worker_id = 2;
+  bool success = 3;
+  string logs = 4;
+  string error_message = 5;
+  google.protobuf.Struct result_payload = 6;
+  string started_at = 7;
+  string ended_at = 8;
+  string result_url = 9;
+  string artifact_url = 10;
+}
+
+message ReportJobResultResponse {
+  bool acknowledged = 1;
+}

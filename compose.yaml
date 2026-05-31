@@ -1,10 +1,50 @@
 services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    init: true
+    group_add:
+      - ${DOCKER_GID:-981}
+      - 0
+    environment:
+      GRPC__SCHEDULER_URL: ${SCHEDULER_GRPC_URL:-node:50051}
+      NATS__URL: ${NATS_URL:-nats://node:4222}
+      WORKER__ID: ${WORKER_ID:-}
+      WORKER__TAGS: ${WORKER_TAGS:-["cpu","docker"]}
+      WORKER__TOTAL_CPU: ${WORKER_CPU:-4}
+      WORKER__TOTAL_MEM_MB: ${WORKER_MEM_MB:-8192}
+      WORKER__TOTAL_GPU: ${WORKER_GPU:-0}
+      WORKER__MAX_SLOTS: ${WORKER_MAX_SLOTS:-2}
+      TIMING__HEARTBEAT_INTERVAL_S: ${HEARTBEAT_INTERVAL_S:-5}
+      TIMING__PULL_INTERVAL_S: ${PULL_INTERVAL_S:-3}
+      S3__ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://node:9000}
+      S3__EXTERNAL_ENDPOINT_URL: ${S3_EXTERNAL_ENDPOINT_URL:-http://node:9000}
+      S3__ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3__SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3__BUCKET: ${S3_BUCKET:-job-results}
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp:/tmp
+    network_mode: service:tailscale
+    depends_on:
+      - tailscale
+    restart: unless-stopped
+
   tailscale:
     image: tailscale/tailscale:latest
     hostname: ${TS_HOSTNAME:-worker}
     environment:
       TS_AUTHKEY: ${TS_AUTHKEY}
       TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_ACCEPT_DNS: "true"
     volumes:
       - tailscale_state:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
