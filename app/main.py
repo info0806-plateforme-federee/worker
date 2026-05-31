@@ -21,8 +21,9 @@ async def main() -> None:
     setup_logging()
 
     logger.info(
-        "Worker %s starting (cpu=%d mem=%dMB gpu=%d slots=%d tags=%s)",
+        "Worker %s starting (scheduler=%s cpu=%d mem=%dMB gpu=%d slots=%d tags=%s)",
         settings.worker.id,
+        settings.grpc.scheduler_url,
         settings.worker.total_cpu,
         settings.worker.total_mem_mb,
         settings.worker.total_gpu,

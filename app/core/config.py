@@ -8,11 +8,11 @@ from pydantic_settings import BaseSettings
 
 
 class GrpcConfig(BaseModel):
-    scheduler_url: str = "scheduler:50051"
+    scheduler_url: str = "node:50051"
 
 
 class NatsConfig(BaseModel):
-    url: str = "nats://nats:4222"
+    url: str = "nats://node:4222"
     subject_jobs_available: str = "jobs.available"
 
 

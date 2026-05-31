@@ -9,9 +9,10 @@ services:
     init: true
     group_add:
       - ${DOCKER_GID:-981}
+      - 0
     environment:
-      GRPC__SCHEDULER_URL: ${SCHEDULER_GRPC_URL:-scheduler:50051}
-      NATS__URL: ${NATS_URL:-nats://nats:4222}
+      GRPC__SCHEDULER_URL: ${SCHEDULER_GRPC_URL:-node:50051}
+      NATS__URL: ${NATS_URL:-nats://node:4222}
       WORKER__ID: ${WORKER_ID:-}
       WORKER__TAGS: ${WORKER_TAGS:-["cpu","docker"]}
       WORKER__TOTAL_CPU: ${WORKER_CPU:-4}
@@ -42,6 +43,8 @@ services:
     environment:
       TS_AUTHKEY: ${TS_AUTHKEY}
       TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_ACCEPT_DNS: "true"
     volumes:
       - tailscale_state:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
