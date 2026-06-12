@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 class SchedulerClient:
+    """Façade autour du stub gRPC généré. Masque la construction des messages protobuf
+    et expose une interface Python claire avec des types natifs."""
+
     def __init__(self, channel: grpc.aio.Channel):
         self._stub = worker_pb2_grpc.WorkerServiceStub(channel)
 
@@ -20,6 +23,8 @@ class SchedulerClient:
         total_mem_mb: int,
         total_gpu: int,
     ) -> worker_pb2.RegisterWorkerResponse:
+        """Déclare ce worker auprès du scheduler avec ses capacités totales.
+        Appelé une seule fois au démarrage, avant d'accepter des jobs."""
         request = worker_pb2.RegisterWorkerRequest(
             worker_id=worker_id,
             tags=tags,
@@ -39,6 +44,9 @@ class SchedulerClient:
         available_slots: int,
         status: str,
     ) -> worker_pb2.HeartbeatWorkerResponse:
+        """Envoie l'état courant des ressources libres au scheduler.
+        Permet au scheduler de savoir si ce worker peut recevoir de nouveaux jobs
+        et de détecter les workers morts (absence de heartbeat)."""
         request = worker_pb2.HeartbeatWorkerRequest(
             worker_id=worker_id,
             free_cpu=free_cpu,
@@ -59,6 +67,9 @@ class SchedulerClient:
         available_slots: int,
         tags: list[str],
     ) -> worker_pb2.PullJobResponse:
+        """Demande un job au scheduler en précisant les ressources disponibles et les tags.
+        Le scheduler choisit le job le plus adapté parmi la file d'attente, ou répond found=False
+        si aucun job ne correspond aux capacités du worker."""
         request = worker_pb2.PullJobRequest(
             worker_id=worker_id,
             free_cpu=free_cpu,
@@ -82,6 +93,9 @@ class SchedulerClient:
         result_url: str = "",
         artifact_url: str = "",
     ) -> worker_pb2.ReportJobResultResponse:
+        """Remonte le résultat d'un job terminé (succès ou échec) vers le scheduler.
+        Les URLs S3 presignées permettent au scheduler de donner accès aux résultats
+        sans exposer les credentials MinIO."""
         request = worker_pb2.ReportJobResultRequest(
             job_id=job_id,
             worker_id=worker_id,
@@ -94,6 +108,8 @@ class SchedulerClient:
             artifact_url=artifact_url,
         )
         if result_payload:
+            # protobuf ne supporte pas les dicts Python directement :
+            # on les convertit en google.protobuf.Struct (équivalent JSON générique)
             payload_struct = Struct()
             payload_struct.update(result_payload)
             request.result_payload.CopyFrom(payload_struct)

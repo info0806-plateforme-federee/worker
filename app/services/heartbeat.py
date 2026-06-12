@@ -13,6 +13,14 @@ async def heartbeat_loop(
     worker_id: str,
     interval_s: int,
 ) -> None:
+    """Envoie périodiquement l'état des ressources au scheduler.
+
+    Le scheduler utilise ces informations pour deux choses :
+    1. Savoir si ce worker a de la capacité libre pour accepter de nouveaux jobs.
+    2. Détecter les workers morts : un worker qui n'envoie plus de heartbeat est marqué offline.
+
+    Les erreurs sont loguées mais ne stoppent pas la boucle : une perte temporaire
+    de connectivité ne doit pas tuer le processus."""
     while True:
         try:
             resp = await client.heartbeat(
